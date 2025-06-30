@@ -2,6 +2,18 @@ import axios from "axios";
 import { Agendamento, HistoricoAgendamento } from "../model/Agendamento";
 import { API_URL } from "../constants/ApiUrl";
 
+export interface ConflictInfo {
+  hasConflict: boolean;
+  conflictingServices: Array<{
+    id: string;
+    data: Date;
+    horario: Date;
+    tipo: 'servico' | 'leilao';
+    titulo?: string;
+  }>;
+  message?: string;
+}
+
 export const AgendamentoService = {
     async AgendarServico(agendamento:Agendamento){
         try{
@@ -18,6 +30,39 @@ export const AgendamentoService = {
             return response.data;
         }catch(error){  
             console.log(error);
+        }
+    },
+
+    async verificarConflitosHorario(
+        fornecedorId: string,
+        data: Date,
+        horario: Date
+    ): Promise<ConflictInfo> {
+        try {
+            const response = await axios.post(`${API_URL}/servicos/verificar-conflitos`, {
+                fornecedorId,
+                data: data.toISOString(),
+                horario: horario.toISOString()
+            });
+            
+            return response.data;
+        } catch (error: any) {
+            if (error.response?.status === 409) {
+                return error.response.data;
+            }
+            throw error;
+        }
+    },
+
+    async criarAgendamento(agendamentoData: any) {
+        try {
+            const response = await axios.post(`${API_URL}/servicos`, agendamentoData);
+            return response.data;
+        } catch (error: any) {
+            if (error.response?.status === 409) {
+                throw new Error(error.response.data.error || 'Conflito de horário detectado!');
+            }
+            throw error;
         }
     }
 }

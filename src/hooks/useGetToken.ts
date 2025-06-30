@@ -11,7 +11,7 @@ interface MyJwtPayload {
 }
 
 export const useGetToken = () => {
-    const [tokenData, setTokenData] = useState<MyJwtPayload | null>(null);
+    const [tokenData, setTokenData] = useState<MyJwtPayload | null | undefined>(undefined); // undefined = carregando
 
     useEffect(() => {
         const getToken = async () => {
@@ -23,9 +23,12 @@ export const useGetToken = () => {
                     const decodedToken = jwtDecode<MyJwtPayload>(token);
                     console.log("Token decodificado:", decodedToken);
                     setTokenData(decodedToken);
+                } else {
+                    setTokenData(null); // Não logado
                 }
             } catch (error) {
                 console.error("Erro ao obter ou decodificar o token:", error);
+                setTokenData(null); // Em caso de erro, assume não logado
             }
         };
 

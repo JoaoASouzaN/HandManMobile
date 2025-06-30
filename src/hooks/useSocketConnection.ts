@@ -21,27 +21,36 @@ export const useSocketConnection = ({
     useEffect(() => {
         if (!tokenId) return;
 
-        // Inicializa o socket
+        // Inicializa o socket com configurações melhoradas
         const socket = io(API_URL, {
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            transports: ['websocket', 'polling'],
+            forceNew: true
         });
 
         socketRef.current = socket;
 
         // Eventos de conexão do socket
         socket.on('connect', () => {
-            console.log('Socket conectado');
+            console.log('Socket conectado com sucesso');
             socket.emit('join', tokenId);
         });
 
-        socket.on('disconnect', () => {
-            console.log('Socket desconectado');
+        socket.on('disconnect', (reason) => {
+            console.log('Socket desconectado:', reason);
         });
 
         socket.on('connect_error', (error) => {
-            console.error('Erro na conexão do socket:', error);
+            console.error('Erro na conexão do socket:', error.message);
+            console.error('Detalhes do erro:', error);
+        });
+
+        socket.on('error', (error) => {
+            console.error('Erro geral do socket:', error);
         });
 
         // Escuta o evento de valor atualizado
@@ -93,6 +102,7 @@ export const useSocketConnection = ({
 
         return () => {
             if (socketRef.current) {
+                console.log('Desconectando socket...');
                 socketRef.current.disconnect();
             }
         };

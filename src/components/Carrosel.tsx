@@ -13,9 +13,11 @@ export const Carrosel = ({ imagens }: CarroselProps) => {
   const carouselRef = useRef<any>(null); // ref para controlar o carrossel
 
   const imagensAlteradas =
-    imagens?.map((ima: string) => ({
-      uri: ima,
-    })) ?? [];
+    imagens && Array.isArray(imagens) 
+      ? imagens.map((ima: string) => ({
+          uri: ima,
+        }))
+      : [];
 
   const handleThumbnailPress = (index: number) => {
     setCurrentIndex(index);

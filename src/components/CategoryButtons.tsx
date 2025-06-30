@@ -17,10 +17,13 @@ export const CategoryButtons = ({ categories, onSelectCategory, loading = false 
     }
   };
 
+  // Verificar se categories é um array válido
+  const validCategories = categories && Array.isArray(categories) ? categories : [];
+
   return (
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {categories.map((category, index) => {
+        {validCategories.map((category, index) => {
           const isSelected = category === selectedCategory; 
           return (
             <TouchableOpacity

@@ -21,7 +21,6 @@ export type StatusType =
     | "Recusado"
     | "confirmar valor";
 
-
 export interface FornecedorHistorico {
     nome: string;
     email: string;
@@ -45,7 +44,7 @@ export type HistoricoAgendamento = {
         email: string;
         telefone: string;
         imagemPerfil: string;
-    };
+    } | null;
 };
 
 export interface Solicitacao {

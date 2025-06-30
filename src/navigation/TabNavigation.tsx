@@ -6,13 +6,19 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import PerfilScreen from '../pages/PerfilScreen';
 import { ServicoScreen } from '../pages/ServicoScreen';
 import { FornecedorStackParamList,FornecedorStackNavigation } from './FornecedorStackNavigation';
-
+import { LeilaoStackNavigation, LeilaoStackParamList } from './LeilaoStackNavigation';
 import { AgendaScreen } from '../pages/AgendaScreen';
+import MeusServicosScreen from '../pages/MeusServicosScreen';
 
 export type RootTabParamList = {
     Home: undefined;
     Serviços: undefined;
+    Leilões: {
+        screen: keyof LeilaoStackParamList;
+        params: LeilaoStackParamList[keyof LeilaoStackParamList];
+    };
     Agenda: undefined;
+    MeusServicos: undefined;
     Perfil: undefined;
     FornecedorStack: {
         screen: keyof FornecedorStackParamList;
@@ -66,11 +72,30 @@ export const TabNavigation = () => {
                 }}
             />
             <Tab.Screen
+                name='Leilões'
+                component={LeilaoStackNavigation}
+                options={{
+                    tabBarIcon: ({ color, size }) => (
+                        <Icon name="gavel" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
                 name='Agenda'
                 component={AgendaScreen}
                 options={{
                     tabBarIcon: ({ color, size }) => (
                         <Icon name="calendar" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name='MeusServicos'
+                component={MeusServicosScreen}
+                options={{
+                    tabBarLabel: 'Meus Serviços',
+                    tabBarIcon: ({ color, size }) => (
+                        <Icon name="clipboard-list" size={size} color={color} />
                     ),
                 }}
             />

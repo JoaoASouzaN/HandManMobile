@@ -12,15 +12,13 @@ import {
     StatusBar,
     Keyboard,
 } from 'react-native';
+
 import { io, Socket } from 'socket.io-client';
 import { useGetToken } from '../hooks/useGetToken';
 import axios from 'axios';
 import { API_URL } from '../constants/ApiUrl';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import imagemDefault from '../assets/carpintaria.png';
-
-
-
 
 interface Mensagem {
     _id: string;
@@ -152,8 +150,8 @@ const Chat: React.FC<ChatProps> = ({ idFornecedor }) => {
                 <Image
                     source={
                         msg.remetenteId === token?.id
-                            ? { uri: token.imagemPerfil }
-                            : { uri: usuarios.find(u => u.id === msg.remetenteId)?.picture || `${imagemDefault}` }
+                            ? { uri: token?.imagemPerfil || imagemDefault }
+                            : { uri: usuarios.find(u => u.id === msg.remetenteId)?.picture || imagemDefault }
                     }
                     style={styles.avatar}
                 />

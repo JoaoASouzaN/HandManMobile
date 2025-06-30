@@ -26,8 +26,10 @@ export const AgendaFornecedor = () => {
     const [solicitacoes, setSolicitacoes] = useState<Solicitacao[]>([]);
     const [loading, setLoading] = useState(true);
     const [filtroAtivo, setFiltroAtivo] = useState<StatusType | 'todos'>('todos');
-    const token = useGetToken();
+    const [filtroUrgencia, setFiltroUrgencia] = useState<'todos' | 'urgente' | 'proximo' | 'futuro'>('todos');
+    const [showFiltros, setShowFiltros] = useState(false);
     const navigation = useNavigation<NavigationProp>();
+    const token = useGetToken();
     const socketRef = useRef<Socket | null>(null);
 
     const { expoPushToken } = useNotifications(token?.id);
@@ -36,17 +38,19 @@ export const AgendaFornecedor = () => {
 
     const handleStatusUpdate = async (update: { id_servico: string; novo_status: string }) => {
         setSolicitacoes(prevSolicitacoes =>
-            prevSolicitacoes.map(solicitacao =>
-                solicitacao.servico.id_servico === update.id_servico
-                    ? {
-                        ...solicitacao,
-                        servico: {
-                            ...solicitacao.servico,
-                            status: update.novo_status
+            prevSolicitacoes && Array.isArray(prevSolicitacoes)
+                ? prevSolicitacoes.map(solicitacao =>
+                    solicitacao.servico.id_servico === update.id_servico
+                        ? {
+                            ...solicitacao,
+                            servico: {
+                                ...solicitacao.servico,
+                                status: update.novo_status
+                            }
                         }
-                    }
-                    : solicitacao
-            )
+                        : solicitacao
+                )
+                : []
         );
 
         try {
@@ -68,6 +72,35 @@ export const AgendaFornecedor = () => {
     };
 
     const { emitirMudancaStatus } = useStatusNotifications(handleStatusUpdate);
+
+    // Função para calcular a urgência de um serviço
+    const calcularUrgencia = (dataServico: Date): 'urgente' | 'proximo' | 'futuro' => {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        const amanha = new Date(hoje);
+        amanha.setDate(hoje.getDate() + 1);
+        
+        const proximaSemana = new Date(hoje);
+        proximaSemana.setDate(hoje.getDate() + 7);
+        
+        if (dataServico <= amanha) return 'urgente';
+        if (dataServico <= proximaSemana) return 'proximo';
+        return 'futuro';
+    };
+
+    // Função para calcular dias restantes
+    const calcularDiasRestantes = (dataServico: Date): number => {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const dataServicoLimpa = new Date(dataServico);
+        dataServicoLimpa.setHours(0, 0, 0, 0);
+        
+        const diffTime = dataServicoLimpa.getTime() - hoje.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return diffDays;
+    };
 
     const atualizarStatusServico = async (id_servico: string, novo_status: StatusType) => {
         try {
@@ -127,23 +160,32 @@ export const AgendaFornecedor = () => {
 
         const socket = io(API_URL, {
             reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000
+            reconnectionAttempts: 10,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            transports: ['websocket', 'polling'],
+            forceNew: true
         });
 
         socketRef.current = socket;
 
         socket.on('connect', () => {
-            console.log('Socket conectado');
+            console.log('Socket conectado com sucesso');
             socket.emit('join', token.id);
         });
 
-        socket.on('disconnect', () => {
-            console.log('Socket desconectado');
+        socket.on('disconnect', (reason) => {
+            console.log('Socket desconectado:', reason);
         });
 
         socket.on('connect_error', (error) => {
-            console.error('Erro na conexão do socket:', error);
+            console.error('Erro na conexão do socket:', error.message);
+            console.error('Detalhes do erro:', error);
+        });
+
+        socket.on('error', (error) => {
+            console.error('Erro geral do socket:', error);
         });
 
         socket.on('novo_agendamento', async (novoAgendamento) => {
@@ -170,7 +212,9 @@ export const AgendaFornecedor = () => {
 
         return () => {
             console.log('Desconectando socket');
-            socket.disconnect();
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
         };
     }, [token]);
 
@@ -190,13 +234,53 @@ export const AgendaFornecedor = () => {
         'Recusado'
     ];
 
-    const solicitacoesFiltradas = filtroAtivo === 'todos' 
-        ? solicitacoes 
-        : solicitacoes.filter(sol => sol.servico.status === filtroAtivo);
+    const solicitacoesFiltradas = solicitacoes.filter(sol => {
+        // Filtro por status
+        if (filtroAtivo !== 'todos' && sol.servico.status !== filtroAtivo) {
+            return false;
+        }
 
-    const solicitacoesOrdenadas = [...solicitacoesFiltradas].sort((a, b) => 
-        new Date(b.servico.data_submisao).getTime() - new Date(a.servico.data_submisao).getTime()
-    );
+        // Filtro por urgência
+        if (filtroUrgencia !== 'todos') {
+            const dataServico = new Date(sol.servico.data);
+            const urgencia = calcularUrgencia(dataServico);
+            if (urgencia !== filtroUrgencia) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    // Ordenação por urgência (prazo mais apertado primeiro)
+    const solicitacoesOrdenadas = [...solicitacoesFiltradas].sort((a, b) => {
+        const dataA = new Date(a.servico.data);
+        const dataB = new Date(b.servico.data);
+        
+        // Primeiro ordena por data (mais próximo primeiro)
+        const diffA = calcularDiasRestantes(dataA);
+        const diffB = calcularDiasRestantes(dataB);
+        
+        if (diffA !== diffB) {
+            return diffA - diffB; // Menor diferença primeiro
+        }
+        
+        // Se a data for igual, ordena por status (pendente primeiro)
+        const prioridadeStatus: Record<string, number> = {
+            'pendente': 1,
+            'confirmar valor': 2,
+            'confirmado': 3,
+            'em andamento': 4,
+            'aguardando pagamento': 5,
+            'concluido': 6,
+            'cancelado': 7
+        };
+        
+        const prioridadeA = prioridadeStatus[a.servico.status.toLowerCase()] || 8;
+        const prioridadeB = prioridadeStatus[b.servico.status.toLowerCase()] || 8;
+        
+        return prioridadeA - prioridadeB;
+    });
 
     if (loading) {
         return (
@@ -207,7 +291,18 @@ export const AgendaFornecedor = () => {
     return (
         <View style={styles.container}>
             <View style={styles.headerContainer}>
-                <Text style={styles.headerTitle}>Solicitações de Serviço</Text>
+                <View style={styles.headerTop}>
+                    <Text style={styles.headerTitle}>Solicitações de Serviço</Text>
+                    <TouchableOpacity 
+                        style={styles.filtroToggle}
+                        onPress={() => setShowFiltros(!showFiltros)}
+                    >
+                        <Text style={styles.filtroToggleText}>
+                            {showFiltros ? 'Ocultar' : 'Filtros'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                
                 <ScrollView 
                     horizontal 
                     showsHorizontalScrollIndicator={false}
@@ -239,6 +334,41 @@ export const AgendaFornecedor = () => {
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
+
+                {/* Filtros adicionais */}
+                {showFiltros && (
+                    <View style={styles.filtrosAdicionais}>
+                        <Text style={styles.filtroLabel}>Urgência:</Text>
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.filtroUrgenciaContainer}
+                        >
+                            {[
+                                { value: 'todos', label: 'Todos' },
+                                { value: 'urgente', label: 'Urgente' },
+                                { value: 'proximo', label: 'Próximo' },
+                                { value: 'futuro', label: 'Futuro' }
+                            ].map((urgencia) => (
+                                <TouchableOpacity
+                                    key={urgencia.value}
+                                    style={[
+                                        styles.filtroUrgenciaBotao,
+                                        filtroUrgencia === urgencia.value && styles.filtroUrgenciaBotaoAtivo
+                                    ]}
+                                    onPress={() => setFiltroUrgencia(urgencia.value as any)}
+                                >
+                                    <Text style={[
+                                        styles.filtroUrgenciaTexto,
+                                        filtroUrgencia === urgencia.value && styles.filtroUrgenciaTextoAtivo
+                                    ]}>
+                                        {urgencia.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
             </View>
 
             <FlatList
@@ -284,12 +414,27 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 3,
     },
+    headerTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+    },
     headerTitle: {
         fontSize: 24,
         fontWeight: 'bold',
         color: '#333333',
-        marginLeft: 16,
-        marginBottom: 16,
+        marginRight: 16,
+    },
+    filtroToggle: {
+        padding: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+    },
+    filtroToggleText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333333',
     },
     filtroContainer: {
         maxHeight: 50,
@@ -323,6 +468,45 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     filtroTextoAtivo: {
+        fontWeight: '700',
+    },
+    filtrosAdicionais: {
+        padding: 16,
+    },
+    filtroLabel: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333333',
+        marginBottom: 8,
+    },
+    filtroUrgenciaContainer: {
+        maxHeight: 50,
+    },
+    filtroUrgenciaBotao: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginHorizontal: 4,
+        borderWidth: 1.5,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    filtroUrgenciaBotaoAtivo: {
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    filtroUrgenciaTexto: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    filtroUrgenciaTextoAtivo: {
         fontWeight: '700',
     },
     listaContainer: {

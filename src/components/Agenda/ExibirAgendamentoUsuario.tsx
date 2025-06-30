@@ -162,10 +162,10 @@ export const ExibirAgendamentoUsuario: React.FC<ExibirAgendamentoUsuarioProps> =
             <ScrollView style={styles.scrollViewContent}>
                 <View style={styles.section}>
                     <Image
-                        source={agendamento.fornecedor.imagemPerfil ? { uri: agendamento.fornecedor.imagemPerfil } : placeholderImage}
+                        source={agendamento.fornecedor?.imagemPerfil ? { uri: agendamento.fornecedor.imagemPerfil } : placeholderImage}
                         style={styles.userImage}
                     />
-                    <Text style={styles.fornecedorName}>{agendamento.fornecedor.nome}</Text>
+                    <Text style={styles.fornecedorName}>{agendamento.fornecedor?.nome || 'Fornecedor não disponível'}</Text>
                     <Text style={styles.orderInfo}>
                         {new Date(agendamento.data).toLocaleDateString()} às {new Date(agendamento.horario).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>

@@ -10,6 +10,7 @@ import {
     Alert,
     ImageBackground,
 } from 'react-native';
+
 import { useAuth } from '../../context/AuthContext';
 import { useBiometric } from '../../hooks/useBiometric';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -72,8 +73,8 @@ const LoginFornecedor: React.FC<LoginScreenProps> = ({ onBack, onNavigate, curre
                 console.log('Status da biometria após verificação:', isBiometricAvailable);
                 
                 // Verifica credenciais salvas
-                const savedEmail = await AsyncStorage.getItem('lastLoginEmail');
-                const savedPassword = await AsyncStorage.getItem('lastLoginPassword');
+                const savedEmail = await AsyncStorage.getItem('lastLoginEmailFornecedor');
+                const savedPassword = await AsyncStorage.getItem('lastLoginPasswordFornecedor');
                 
                 console.log('=== Status das credenciais ===');
                 console.log('Email salvo:', savedEmail ? 'Sim' : 'Não');
@@ -113,8 +114,8 @@ const LoginFornecedor: React.FC<LoginScreenProps> = ({ onBack, onNavigate, curre
             console.log('Resultado da autenticação biométrica:', success);
             
             if (success) {
-                const savedEmail = await AsyncStorage.getItem('lastLoginEmail');
-                const savedPassword = await AsyncStorage.getItem('lastLoginPassword');
+                const savedEmail = await AsyncStorage.getItem('lastLoginEmailFornecedor');
+                const savedPassword = await AsyncStorage.getItem('lastLoginPasswordFornecedor');
                 
                 if (savedEmail && savedPassword) {
                     console.log('Tentando login com credenciais salvas');
@@ -127,8 +128,8 @@ const LoginFornecedor: React.FC<LoginScreenProps> = ({ onBack, onNavigate, curre
                         console.log('Falha no login com credenciais salvas:', result.message);
                         Alert.alert('Erro', 'Credenciais inválidas. Por favor, faça login manualmente.');
                         // Limpa as credenciais inválidas
-                        await AsyncStorage.removeItem('lastLoginEmail');
-                        await AsyncStorage.removeItem('lastLoginPassword');
+                        await AsyncStorage.removeItem('lastLoginEmailFornecedor');
+                        await AsyncStorage.removeItem('lastLoginPasswordFornecedor');
                         setHasStoredCredentials(false);
                     }
                 }
@@ -156,8 +157,8 @@ const LoginFornecedor: React.FC<LoginScreenProps> = ({ onBack, onNavigate, curre
 
             if (result.success) {
                 console.log('Login manual bem-sucedido, salvando credenciais');
-                await AsyncStorage.setItem('lastLoginEmail', email);
-                await AsyncStorage.setItem('lastLoginPassword', senha);
+                await AsyncStorage.setItem('lastLoginEmailFornecedor', email);
+                await AsyncStorage.setItem('lastLoginPasswordFornecedor', senha);
                 setHasStoredCredentials(true);
                 
                 Alert.alert('Login realizado com sucesso!');
@@ -220,6 +221,18 @@ const LoginFornecedor: React.FC<LoginScreenProps> = ({ onBack, onNavigate, curre
                             <Text style={styles.loginButtonText}>Entrar</Text>
                         )}
                     </TouchableOpacity>
+
+                    {/* Botão de Login Biométrico */}
+                    {hasStoredCredentials && isBiometricAvailable && (
+                        <TouchableOpacity
+                            style={[styles.biometricButton, loading && styles.buttonDisabled]}
+                            onPress={handleBiometricLogin}
+                            disabled={loading}
+                        >
+                            <Icon name="fingerprint" size={24} color="#FFFFFF" style={styles.biometricIcon} />
+                            <Text style={styles.biometricButtonText}>Entrar com Digital</Text>
+                        </TouchableOpacity>
+                    )}
 
                     <View style={styles.registerContainer}>
                         <Text style={styles.registerText}>Não tem uma conta? </Text>
@@ -333,7 +346,24 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         textAlign: 'center',
-    }
+    },
+    biometricButton: {
+        backgroundColor: '#7A2D00',
+        borderRadius: 8,
+        padding: 15,
+        alignItems: 'center',
+        marginBottom: 20,
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    biometricIcon: {
+        marginRight: 10,
+    },
+    biometricButtonText: {
+        color: '#ffffff',
+        fontSize: 18,
+        fontWeight: '600',
+    },
 });
 
 export default LoginFornecedor;

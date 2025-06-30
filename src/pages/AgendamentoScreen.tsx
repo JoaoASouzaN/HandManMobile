@@ -6,6 +6,7 @@ import { FornecedorStackParamList } from '../navigation/FornecedorStackNavigatio
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { FornecedorService } from '../services/FornecedoresService';
+import { AgendamentoService } from '../services/AgendamentoServico';
 
 import { Loading } from '../components/Loading';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -37,15 +38,64 @@ export const AgendamentoScreen = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('');
 
-    const handleConfirmar = () => {
-        navigation.navigate('ConfirmacaoScreen', {
-            fornecedorId,
-            data: data.toLocaleDateString(),
-            horario,
-            endereco,
-            imagem,
-            categoria: categoriaSelecionada,
-        });
+    const handleConfirmar = async () => {
+        if (!categoriaSelecionada || !horario || !endereco || !fornecedorId) {
+            Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Criar data e horário combinados
+            const [hora, minuto] = horario.split(':').map(Number);
+            const dataHora = new Date(data);
+            dataHora.setHours(hora, minuto, 0, 0);
+
+            // Verificar conflitos de horário
+            try {
+                const conflitos = await AgendamentoService.verificarConflitosHorario(
+                    fornecedorId,
+                    data,
+                    dataHora
+                );
+
+                if (conflitos.hasConflict) {
+                    Alert.alert(
+                        'Conflito de Horário',
+                        conflitos.message || 'Você já tem um compromisso agendado neste horário.',
+                        [{ text: 'OK' }]
+                    );
+                    setLoading(false);
+                    return;
+                }
+            } catch (conflitoError: any) {
+                if (conflitoError.response?.status === 409) {
+                    Alert.alert(
+                        'Conflito de Horário',
+                        conflitoError.response.data.error || 'Conflito de horário detectado!',
+                        [{ text: 'OK' }]
+                    );
+                    setLoading(false);
+                    return;
+                }
+                // Se não for erro de conflito, continua com o agendamento
+                console.warn('Erro ao verificar conflitos:', conflitoError);
+            }
+
+            navigation.navigate('ConfirmacaoScreen', {
+                fornecedorId,
+                data: data.toLocaleDateString(),
+                horario,
+                endereco,
+                imagem,
+                categoria: categoriaSelecionada,
+            });
+        } catch (error: any) {
+            console.error('Erro ao verificar conflitos:', error);
+            Alert.alert('Erro', 'Erro ao verificar disponibilidade. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleGetFornecedor = async () => {
@@ -55,10 +105,12 @@ export const AgendamentoScreen = () => {
             
             if (!fornecedor) return;
     
-            const categoriasFormatadas = fornecedor.categoria_servico.map((cat: string) => ({
-                label: cat,
-                value: cat,
-            }));
+            const categoriasFormatadas = fornecedor.categoria_servico && Array.isArray(fornecedor.categoria_servico) 
+                ? fornecedor.categoria_servico.map((cat: string) => ({
+                    label: cat,
+                    value: cat,
+                }))
+                : [];
     
             setFornecedor(categoriasFormatadas);
     

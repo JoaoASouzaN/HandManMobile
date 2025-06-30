@@ -89,7 +89,7 @@ export const DetalhesFornecedor = ({ fornecedor }: DetalhesFornecedorProps) => {
             <View style={styles.servicesOfferedSection}>
                 <View style={styles.servicesOfferedCard}>
                     <Text style={styles.servicesOfferedTitle}>Este serviço é oferecido por um profissional.</Text>
-                    {dadosFornecedor?.categoria_servico && dadosFornecedor.categoria_servico.map((servico, index) => (
+                    {dadosFornecedor?.categoria_servico && Array.isArray(dadosFornecedor.categoria_servico) && dadosFornecedor.categoria_servico.map((servico, index) => (
                         <View key={index} style={styles.serviceItem}>
                             <Text style={styles.serviceItemText}>{servico}</Text>
                         </View>

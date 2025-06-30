@@ -13,16 +13,15 @@ import { useNavigation } from '@react-navigation/native';
 import { ArrowRight } from 'lucide-react-native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { RootTabParamList } from '../navigation/TabNavigation';
+import { LeilaoCarousel } from '../components/leilao/LeilaoCarousel';
 
 const { width, height } = Dimensions.get('window');
 declare function require(path: string): any;
-
 
 type HomeScreenNavigationProp = BottomTabNavigationProp<RootTabParamList, 'Home'>;
 
 const HomeScreen = () => {
   
-
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   /*useEffect(() => {
@@ -48,6 +47,9 @@ const HomeScreen = () => {
             <ArrowRight color="#B54708" size={24} />
           </TouchableOpacity>
         </View>
+
+        {/* Leilões em Destaque Section */}
+        <LeilaoCarousel />
 
         {/* Nossa Essência Section */}
         <View style={styles.essenciaSection}>

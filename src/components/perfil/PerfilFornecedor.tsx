@@ -10,6 +10,7 @@ import {
     Alert,
     ActivityIndicator
 } from 'react-native';
+
 import axios from 'axios';
 import { typeFornecedor } from '../../model/Fornecedor';
 import { API_URL } from '../../constants/ApiUrl';
@@ -59,16 +60,54 @@ export const PerfilFornecedor: React.FC = () => {
     const carregarPerfil = async () => {
         try {
             setLoading(true);
+            setError(null);
+            
             if (!userId) {
-                console.log('Aguardando token...');
+                console.log('❌ userId não encontrado');
+                setError('ID do usuário não encontrado');
                 return;  
             }
+            
+            console.log('🔍 Buscando perfil do fornecedor:', userId);
             const response = await axios.get(`${API_URL}/fornecedor/${userId}`);
-            setPerfil(response.data);
-            setError(null);
-        } catch (err) {
-            setError('Erro ao carregar perfil. Tente novamente mais tarde.');
-            console.error('Erro ao carregar perfil:', err);
+            
+            console.log('✅ Dados recebidos:', response.data);
+            
+            // Verificar se todos os campos obrigatórios estão presentes
+            const dados = response.data;
+            if (!dados.nome || !dados.email) {
+                console.log('❌ Dados incompletos recebidos:', dados);
+                setError('Dados do perfil incompletos');
+                return;
+            }
+            
+            setPerfil(dados);
+            console.log('✅ Perfil carregado com sucesso');
+            
+        } catch (err: any) {
+            console.error('❌ Erro detalhado ao carregar perfil:', err);
+            
+            if (err.response) {
+                // Erro da API
+                console.error('Status:', err.response.status);
+                console.error('Dados:', err.response.data);
+                
+                if (err.response.status === 404) {
+                    setError('Fornecedor não encontrado. Verifique se você está logado corretamente.');
+                } else if (err.response.status === 500) {
+                    setError('Erro interno do servidor. Tente novamente mais tarde.');
+                } else {
+                    setError(`Erro ${err.response.status}: ${err.response.data?.error || 'Erro desconhecido'}`);
+                }
+            } else if (err.request) {
+                // Erro de rede
+                console.error('Erro de rede:', err.request);
+                setError('Erro de conexão. Verifique sua internet e tente novamente.');
+            } else {
+                // Outro erro
+                console.error('Erro:', err.message);
+                setError('Erro ao carregar perfil. Tente novamente mais tarde.');
+            }
         } finally {
             setLoading(false);
         }
@@ -368,7 +407,7 @@ export const PerfilFornecedor: React.FC = () => {
                     <Text style={styles.addButtonText}>Adicionar Imagem</Text>
                 </TouchableOpacity>
                 <View style={styles.serviceImagesContainer}>
-                    {perfil.imagemServicos.map((imgSrc, index) => (
+                    {perfil.imagemServicos && Array.isArray(perfil.imagemServicos) && perfil.imagemServicos.map((imgSrc, index) => (
                         <View key={index} style={styles.serviceImageWrapper}>
                             <Image source={{ uri: imgSrc }} style={styles.serviceImage} />
                         </View>

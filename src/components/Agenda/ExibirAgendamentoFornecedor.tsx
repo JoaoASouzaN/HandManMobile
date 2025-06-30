@@ -245,7 +245,7 @@ export const ExibirAgendamentoFornecedor: React.FC<ExibirAgendamentoFornecedorPr
             </View>
 
             {/* Seção de Imagens */}
-            {agendamento.imagems && agendamento.imagems.length > 0 && (
+            {agendamento.imagems && Array.isArray(agendamento.imagems) && agendamento.imagems.length > 0 && (
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Imagens do Serviço</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageGallery}>

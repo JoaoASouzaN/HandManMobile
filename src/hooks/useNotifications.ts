@@ -13,7 +13,6 @@ Notifications.setNotificationHandler({
     }),
   });
   
-
 export const useNotifications = (userId: string | undefined) => {
     const [expoPushToken, setExpoPushToken] = useState<string>('');
     const notificationListener = useRef<Notifications.EventSubscription | null>(null);
@@ -50,12 +49,19 @@ export const useNotifications = (userId: string | undefined) => {
             }
 
             try {
+                // Verificar se estamos em desenvolvimento ou produção
+                const projectId = '6a0837b0-d572-4b1f-9e62-d05aca2536ce';
+                
+                console.log('Tentando obter token com projectId:', projectId);
+                
                 token = (await Notifications.getExpoPushTokenAsync({
-                    projectId: 'snack-8f8e781c-db99-4f20-881a-5b19ef3f4fcf'
+                    projectId: projectId
                 })).data;
                 console.log('Token obtido com sucesso:', token);
             } catch (error) {
-                console.error('Erro ao obter token:', error);
+                console.error('Erro ao obter token de notificação:', error);
+                // Em caso de erro, não interromper o fluxo da aplicação
+                return null;
             }
         } else {
             console.log('É necessário um dispositivo físico para Push Notifications');
@@ -74,6 +80,7 @@ export const useNotifications = (userId: string | undefined) => {
             console.log('Token salvo com sucesso no backend');
         } catch (error) {
             console.error('Erro ao salvar token de notificação:', error);
+            // Não interromper o fluxo da aplicação se falhar ao salvar o token
         }
     }
 
@@ -90,7 +97,12 @@ export const useNotifications = (userId: string | undefined) => {
                 console.log('Token registrado:', token);
                 setExpoPushToken(token);
                 savePushToken(token);
+            } else {
+                console.log('Token de notificação não foi obtido, mas a aplicação continuará funcionando');
             }
+        }).catch(error => {
+            console.error('Erro ao registrar notificações:', error);
+            // Não interromper o fluxo da aplicação
         });
 
         notificationListener.current = Notifications.addNotificationReceivedListener(notification => {

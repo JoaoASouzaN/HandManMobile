@@ -11,7 +11,6 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useGetToken } from '../../hooks/useGetToken';
 import { useSocketConnection } from '../../hooks/useSocketConnection';
 
-
 type NavigationProp = CompositeNavigationProp<
     BottomTabNavigationProp<RootTabParamList>,
     BottomTabNavigationProp<FornecedorStackParamList>
@@ -41,6 +40,64 @@ export const CardAgendamento: React.FC<CardAgendamentoProps> = ({
     const navigation = useNavigation<NavigationProp>();
     const token = useGetToken();
     const [valorAtual, setValorAtual] = useState<number | null>(agendamento.valor || null);
+
+    // Função para calcular a urgência de um serviço
+    const calcularUrgencia = (dataServico: Date): 'urgente' | 'proximo' | 'futuro' => {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        const amanha = new Date(hoje);
+        amanha.setDate(hoje.getDate() + 1);
+        
+        const proximaSemana = new Date(hoje);
+        proximaSemana.setDate(hoje.getDate() + 7);
+        
+        if (dataServico <= amanha) return 'urgente';
+        if (dataServico <= proximaSemana) return 'proximo';
+        return 'futuro';
+    };
+
+    // Função para calcular dias restantes
+    const calcularDiasRestantes = (dataServico: Date): number => {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const dataServicoLimpa = new Date(dataServico);
+        dataServicoLimpa.setHours(0, 0, 0, 0);
+        
+        const diffTime = dataServicoLimpa.getTime() - hoje.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return diffDays;
+    };
+
+    // Calcular urgência do serviço atual
+    const dataServico = new Date(agendamento.data);
+    const urgencia = calcularUrgencia(dataServico);
+    const diasRestantes = calcularDiasRestantes(dataServico);
+
+    // Configuração visual da urgência
+    const urgenciaConfig = {
+        urgente: { 
+            color: '#EF4444', 
+            bgColor: '#FEE2E2', 
+            text: diasRestantes === 0 ? 'HOJE!' : 'AMANHÃ!',
+            icon: '🔥'
+        },
+        proximo: { 
+            color: '#F59E0B', 
+            bgColor: '#FEF3C7', 
+            text: `${diasRestantes} dias`,
+            icon: '⚡'
+        },
+        futuro: { 
+            color: '#10B981', 
+            bgColor: '#D1FAE5', 
+            text: `${diasRestantes} dias`,
+            icon: '📅'
+        }
+    };
+
+    const configUrgencia = urgenciaConfig[urgencia];
 
     // Usando o hook de socket
     useSocketConnection({
@@ -104,22 +161,37 @@ export const CardAgendamento: React.FC<CardAgendamentoProps> = ({
 
     return (
         <TouchableOpacity style={styles.cardContainer} onPress={handleCardPress}>
+            {/* Indicador de Urgência */}
+            {urgencia === 'urgente' && (
+                <View style={[styles.urgenciaBadge, { backgroundColor: configUrgencia.bgColor }]}>
+                    <Text style={[styles.urgenciaText, { color: configUrgencia.color }]}>
+                        {configUrgencia.icon} {configUrgencia.text}
+                    </Text>
+                </View>
+            )}
+
             <View style={styles.headerContainer}>
                 <Image
                     source={
-                        agendamento.fornecedor.imagemPerfil 
+                        agendamento.fornecedor?.imagemPerfil 
                         ? { uri: agendamento.fornecedor.imagemPerfil }
                         : placeholderImage
                     }
                     style={styles.providerImage}
                 />
-                <Text style={styles.providerName}>{agendamento.fornecedor.nome}</Text>
+                <Text style={styles.providerName}>{agendamento.fornecedor?.nome || 'Fornecedor não disponível'}</Text>
             </View>
 
             <View style={styles.detailsContainer}>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Data do serviço:</Text>
-                    <Text style={styles.detailValue}>{new Date(agendamento.data).toLocaleDateString()}</Text>
+                    <Text style={styles.detailValue}>
+                        {new Date(agendamento.data).toLocaleDateString()}
+                        {/* Indicador de urgência sutil */}
+                        <Text style={[styles.urgenciaSutil, { color: configUrgencia.color }]}>
+                            {' '}{configUrgencia.icon} {configUrgencia.text}
+                        </Text>
+                    </Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Valor:</Text>
@@ -389,6 +461,21 @@ const styles = StyleSheet.create({
     valorButtons: {
         flexDirection: 'column',
         gap: 8,
+    },
+    urgenciaBadge: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        padding: 4,
+        borderRadius: 8,
+    },
+    urgenciaText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    urgenciaSutil: {
+        fontSize: 12,
+        fontWeight: 'normal',
     },
 });
 
