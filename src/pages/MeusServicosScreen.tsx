@@ -35,6 +35,7 @@ const MeusServicosScreen: React.FC = () => {
 
   useEffect(() => {
     if (token !== undefined && token?.id) {
+      console.log('[DEBUG MOBILE] Token:', token);
       buscarServicos();
     }
   }, [token]);
@@ -53,6 +54,7 @@ const MeusServicosScreen: React.FC = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      console.log('[DEBUG MOBILE] Dados recebidos:', data);
       
       if (Array.isArray(data)) {
         setServicos(data);

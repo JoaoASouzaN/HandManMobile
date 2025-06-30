@@ -145,8 +145,12 @@ export const LeiloesScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.emptyContainer}>
+          <Icon name="emoticon-sad-outline" size={48} color="#ccc" style={{ marginBottom: 12 }} />
           <Text style={styles.emptyText}>
             Nenhum leilão disponível no momento
+          </Text>
+          <Text style={{ color: '#999', textAlign: 'center' }}>
+            Não há leilões ativos no momento. Volte mais tarde!
           </Text>
         </View>
       )}
@@ -227,11 +231,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    padding: 32,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    color: '#888',
+    fontWeight: 'bold',
+    marginBottom: 8,
     textAlign: 'center',
   },
 }); 
